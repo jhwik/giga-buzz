@@ -82,4 +82,31 @@
                 if(rank === 2) medal = "🥈";
                 if(rank === 3) medal = "🥉";
                 
-                li.innerHTML = `<span>${
+                li.innerHTML = `<span>${medal} ${rank}등 : ${name}</span>`;
+                
+                const correctBtn = document.createElement('button');
+                correctBtn.innerText = "정답 (+점수 부여)";
+                correctBtn.className = "success-btn";
+                correctBtn.onclick = () => awardPoints(name);
+                
+                li.appendChild(correctBtn);
+                list.appendChild(li);
+                rank++;
+            });
+        });
+
+        // 3. 점수 부여 및 버저 비활성화
+        function awardPoints(name) {
+            const points = parseInt(document.getElementById('pointValue').value);
+            const playerRef = db.ref('players/' + name + '/score');
+            
+            playerRef.transaction((currentScore) => {
+                return (currentScore || 0) + points;
+            });
+            
+            db.ref('gameState/isBuzzerActive').set(false); // 라운드 종료
+            alert(`🎉 ${name} 학생에게 정답 처리 및 ${points}점 부여 완료!`);
+        }
+
+        // 4. 점수판 실시간 업데이트 (점수 내림차순 정렬)
+        
