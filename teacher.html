@@ -11,14 +11,28 @@
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
         .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         h1 { color: #2c3e50; text-align: center; }
-        .control-panel { background: #e8f4f8; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .control-panel { background: #e8f4f8; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         input[type="number"] { padding: 8px; font-size: 16px; width: 80px; text-align: center; border: 1px solid #ccc; border-radius: 5px; }
-        button { padding: 10px 15px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; background: #3498db; color: white; transition: 0.3s; }
-        button:hover { background: #2980b9; }
-        .success-btn { background: #2ecc71; margin-left: 10px; }
-        .success-btn:hover { background: #27ae60; }
+        button { padding: 10px 15px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; transition: 0.2s; color: white; }
+        button:active { transform: scale(0.95); }
+        
+        /* 상단 컨트롤 버튼 색상 */
+        .btn-start { background: #3498db; }
+        .btn-start:hover { background: #2980b9; }
+        .btn-stop { background: #e74c3c; }
+        .btn-stop:hover { background: #c0392b; }
+        .btn-reset { background: #95a5a6; margin-left: auto; }
+        .btn-reset:hover { background: #7f8c8d; }
+
+        /* 학생별 채점 버튼 색상 */
+        .btn-correct { background: #2ecc71; margin-left: 10px; font-size: 14px; padding: 6px 12px; }
+        .btn-correct:hover { background: #27ae60; }
+        .btn-wrong { background: #e67e22; margin-left: 5px; font-size: 14px; padding: 6px 12px; }
+        .btn-wrong:hover { background: #d35400; }
+
         ul { list-style: none; padding: 0; }
         li { background: #ecf0f1; margin: 5px 0; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; }
+        .btn-group { display: flex; gap: 5px; }
         .section-title { border-bottom: 2px solid #3498db; padding-bottom: 5px; color: #34495e; margin-top: 30px; }
     </style>
 </head>
@@ -27,12 +41,14 @@
         <h1>👨‍🏫 Giga Buzz 선생님 대시보드</h1>
         
         <div class="control-panel">
-            <label style="font-weight: bold;">🎯 이번 문제 점수 : </label>
+            <label style="font-weight: bold;">🎯 배점 : </label>
             <input type="number" id="pointValue" value="10">
-            <button onclick="startRound()">🔔 버저 활성화 (학생들 누르기 시작!)</button>
+            <button class="btn-start" onclick="startRound()">🔔 버저 활성화</button>
+            <button class="btn-stop" onclick="stopBuzzer()">🔒 버저 잠금</button>
+            <button class="btn-reset" onclick="resetScores()">전체 점수 초기화</button>
         </div>
 
-        <h2 class="section-title">⚡ 버저 누른 순서</h2>
+        <h2 class="section-title">⚡ 버저 누른 순서 (상태: <span id="buzzerStatus" style="color:red;">잠김</span>)</h2>
         <ul id="buzzerList">
             <li style="font-weight: normal; font-size: 14px; color: gray;">대기 중... (버저를 활성화해주세요)</li>
         </ul>
@@ -42,7 +58,7 @@
     </div>
 
     <script>
-        // 선생님의 Firebase 접속 정보 적용 완료
+        // Firebase 접속 정보
         const firebaseConfig = {
             apiKey: "AIzaSyCJ2RTGd9hlM4G_vGq1yjfbhwhLRlPQ6O8",
             authDomain: "giga-buzz.firebaseapp.com",
@@ -55,13 +71,39 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // 1. 라운드 시작
+        // 선생님 화면 상단 버저 상태(열림/잠김) 텍스트 표시 연동
+        db.ref('gameState/isBuzzerActive').on('value', (snapshot) => {
+            const statusSpan = document.getElementById('buzzerStatus');
+            if(snapshot.val() === true) {
+                statusSpan.innerText = "활성화 됨🟢";
+                statusSpan.style.color = "green";
+            } else {
+                statusSpan.innerText = "잠김🔴";
+                statusSpan.style.color = "red";
+            }
+        });
+
+        // 1. 라운드 시작 (버저 활성화)
         function startRound() {
-            db.ref('buzzers').remove(); // 기존 누른 기록 초기화
-            db.ref('gameState/isBuzzerActive').set(true); // 활성화
+            db.ref('buzzers').remove(); // 누른 기록 지우기
+            db.ref('gameState/isBuzzerActive').set(true);
         }
 
-        // 2. 실시간 버저 순서 감지 (서버 시간 기준 정렬)
+        // 2. 버저 강제 잠금
+        function stopBuzzer() {
+            db.ref('gameState/isBuzzerActive').set(false);
+        }
+
+        // 3. 점수 초기화 (새로운 반 시작할 때)
+        function resetScores() {
+            if(confirm("모든 학생의 점수를 0점으로 초기화하시겠습니까?")) {
+                db.ref('players').remove();
+                db.ref('buzzers').remove();
+                alert("초기화 되었습니다.");
+            }
+        }
+
+        // 4. 실시간 버저 순서 감지
         db.ref('buzzers').orderByValue().on('value', (snapshot) => {
             const list = document.getElementById('buzzerList');
             list.innerHTML = '';
@@ -76,7 +118,6 @@
                 const name = child.key;
                 const li = document.createElement('li');
                 
-                // 순위에 따라 메달 이모지 추가
                 let medal = "🔹";
                 if(rank === 1) medal = "🥇";
                 if(rank === 2) medal = "🥈";
@@ -84,41 +125,62 @@
                 
                 li.innerHTML = `<span>${medal} ${rank}등 : ${name}</span>`;
                 
+                // 정답, 오답 버튼 그룹
+                const btnGroup = document.createElement('div');
+                btnGroup.className = "btn-group";
+
                 const correctBtn = document.createElement('button');
-                correctBtn.innerText = "정답 (+점수 부여)";
-                correctBtn.className = "success-btn";
-                correctBtn.onclick = () => awardPoints(name);
+                correctBtn.innerText = "정답 (+)";
+                correctBtn.className = "btn-correct";
+                correctBtn.onclick = () => awardPoints(name, true);
+
+                const wrongBtn = document.createElement('button');
+                wrongBtn.innerText = "오답 (-)";
+                wrongBtn.className = "btn-wrong";
+                wrongBtn.onclick = () => awardPoints(name, false);
+
+                btnGroup.appendChild(correctBtn);
+                btnGroup.appendChild(wrongBtn);
+                li.appendChild(btnGroup);
                 
-                li.appendChild(correctBtn);
                 list.appendChild(li);
                 rank++;
             });
         });
 
-        // 3. 점수 부여 및 버저 비활성화
-        function awardPoints(name) {
+        // 5. 점수 부여 및 감점 처리
+        function awardPoints(name, isCorrect) {
             const points = parseInt(document.getElementById('pointValue').value);
             const playerRef = db.ref('players/' + name + '/score');
             
             playerRef.transaction((currentScore) => {
-                return (currentScore || 0) + points;
+                let score = currentScore || 0;
+                if(isCorrect) {
+                    return score + points; // 정답: 더하기
+                } else {
+                    return score - points; // 오답: 빼기
+                }
             });
             
-            db.ref('gameState/isBuzzerActive').set(false); // 라운드 종료
-            alert(`🎉 ${name} 학생에게 정답 처리 및 ${points}점 부여 완료!`);
+            db.ref('gameState/isBuzzerActive').set(false); // 채점 후 일단 버저 잠금
+            
+            if(isCorrect) {
+                alert(`🎉 정답! [${name}] 학생에게 ${points}점 부여 완료!`);
+            } else {
+                alert(`❌ 오답! [${name}] 학생에게서 ${points}점 차감!`);
+            }
         }
 
-        // 4. 점수판 실시간 업데이트 (점수 내림차순 정렬)
+        // 6. 점수판 실시간 업데이트 (내림차순 정렬)
         db.ref('players').orderByChild('score').on('value', (snapshot) => {
             const scores = document.getElementById('scoreBoard');
             scores.innerHTML = '';
             
-            // Firebase는 오름차순 정렬이 기본이므로, 배열로 바꿔서 내림차순으로 뒤집기
             let tempArray = [];
             snapshot.forEach((child) => {
                 tempArray.push({ name: child.key, score: child.val().score });
             });
-            tempArray.reverse(); // 내림차순
+            tempArray.reverse();
 
             tempArray.forEach((student, index) => {
                 scores.innerHTML += `<li><span>${index + 1}. ${student.name}</span> <span style="color: #e74c3c;">${student.score}점</span></li>`;
