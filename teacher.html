@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>교사 대시보드 - Giga Buzz</title>
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; }
+        .control-panel { background: #e8f4f8; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        input[type="number"] { padding: 8px; font-size: 16px; width: 80px; text-align: center; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 15px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; background: #3498db; color: white; transition: 0.3s; }
+        button:hover { background: #2980b9; }
+        .success-btn { background: #2ecc71; margin-left: 10px; }
+        .success-btn:hover { background: #27ae60; }
+        ul { list-style: none; padding: 0; }
+        li { background: #ecf0f1; margin: 5px 0; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; }
+        .section-title { border-bottom: 2px solid #3498db; padding-bottom: 5px; color: #34495e; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👨‍🏫 Giga Buzz 선생님 대시보드</h1>
+        
+        <div class="control-panel">
+            <label style="font-weight: bold;">🎯 이번 문제 점수 : </label>
+            <input type="number" id="pointValue" value="10">
+            <button onclick="startRound()">🔔 버저 활성화 (학생들 누르기 시작!)</button>
+        </div>
+
+        <h2 class="section-title">⚡ 버저 누른 순서</h2>
+        <ul id="buzzerList">
+            <li style="font-weight: normal; font-size: 14px; color: gray;">대기 중... (버저를 활성화해주세요)</li>
+        </ul>
+
+        <h2 class="section-title">🏆 학생 점수 현황</h2>
+        <ul id="scoreBoard"></ul>
+    </div>
+
+    <script>
+        // 선생님의 Firebase 접속 정보 적용 완료
+        const firebaseConfig = {
+            apiKey: "AIzaSyCJ2RTGd9hlM4G_vGq1yjfbhwhLRlPQ6O8",
+            authDomain: "giga-buzz.firebaseapp.com",
+            databaseURL: "https://giga-buzz-default-rtdb.firebaseio.com",
+            projectId: "giga-buzz",
+            storageBucket: "giga-buzz.firebasestorage.app",
+            messagingSenderId: "123263420761",
+            appId: "1:123263420761:web:23643403fc18bb1d2ce448"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // 1. 라운드 시작
+        function startRound() {
+            db.ref('buzzers').remove(); // 기존 누른 기록 초기화
+            db.ref('gameState/isBuzzerActive').set(true); // 활성화
+        }
+
+        // 2. 실시간 버저 순서 감지 (서버 시간 기준 정렬)
+        db.ref('buzzers').orderByValue().on('value', (snapshot) => {
+            const list = document.getElementById('buzzerList');
+            list.innerHTML = '';
+            
+            if(!snapshot.exists()) {
+                list.innerHTML = '<li style="font-weight: normal; font-size: 14px; color: gray;">아직 누른 학생이 없습니다.</li>';
+                return;
+            }
+
+            let rank = 1;
+            snapshot.forEach((child) => {
+                const name = child.key;
+                const li = document.createElement('li');
+                
+                // 순위에 따라 메달 이모지 추가
+                let medal = "🔹";
+                if(rank === 1) medal = "🥇";
+                if(rank === 2) medal = "🥈";
+                if(rank === 3) medal = "🥉";
+                
+                li.innerHTML = `<span>${
