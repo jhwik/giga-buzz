@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Giga Buzz - 스마트 교실 버저 프로그램</title>
+    <style>
+        /* 기본 스타일 및 폰트 설정 */
+        body { 
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; 
+            background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%); 
+            color: #2c3e50; 
+            margin: 0; 
+            padding: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+        }
+        
+        .container { 
+            text-align: center; 
+            background: rgba(255, 255, 255, 0.9); 
+            padding: 40px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15); 
+            width: 90%; 
+            max-width: 400px; 
+        }
+        
+        h1 { 
+            margin-top: 0; 
+            font-size: 32px; 
+            color: #2c3e50; 
+            margin-bottom: 10px;
+        }
+        
+        p { 
+            color: #7f8c8d; 
+            margin-bottom: 30px; 
+            font-size: 16px;
+        }
+
+        /* 버튼 컨테이너 및 디자인 */
+        .btn-group { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+        }
+        
+        .btn { 
+            text-decoration: none; 
+            padding: 18px; 
+            font-size: 20px; 
+            font-weight: bold; 
+            border-radius: 12px; 
+            color: white; 
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        /* 선생님 버튼 (파란색) */
+        .btn-teacher { 
+            background-color: #3498db; 
+            box-shadow: 0 5px 0 #2980b9; 
+        }
+        
+        .btn-teacher:hover { 
+            background-color: #2980b9; 
+            transform: translateY(2px);
+            box-shadow: 0 3px 0 #1c5980;
+        }
+
+        /* 학생 버튼 (초록색) */
+        .btn-student { 
+            background-color: #2ecc71; 
+            box-shadow: 0 5px 0 #27ae60; 
+        }
+        
+        .btn-student:hover { 
+            background-color: #27ae60; 
+            transform: translateY(2px);
+            box-shadow: 0 3px 0 #1e8449;
+        }
+        
+        /* 눌렀을 때 효과 */
+        .btn:active {
+            transform: translateY(5px);
+            box-shadow: none;
+        }
+        
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #95a5a6;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🔔 Giga Buzz</h1>
+        <p>어떤 역할로 참여하시나요?</p>
+        
+        <div class="btn-group">
+            <!-- 교사용 페이지 이동 -->
+            <a href="teacher.html" class="btn btn-teacher">
+                👨‍🏫 선생님 대시보드
+            </a>
+            
+            <!-- 학생용 페이지 이동 -->
+            <a href="student.html" class="btn btn-student">
+                🙋‍♂️ 학생 버저 접속
+            </a>
+        </div>
+        
+        <div class="footer">
+            스마트 교실 실시간 퀴즈 시스템
+        </div>
+    </div>
+
+</body>
+</html>
