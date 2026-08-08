@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>학생 버저 - Giga Buzz</title>
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #2c3e50; color: white; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        .container { text-align: center; width: 90%; max-width: 400px; background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; }
+        input { padding: 15px; font-size: 20px; width: 80%; border: none; border-radius: 10px; margin-bottom: 20px; text-align: center; outline: none; }
+        .btn-join { padding: 15px 30px; font-size: 20px; background: #2ecc71; color: white; border: none; border-radius: 10px; cursor: pointer; width: 100%; box-shadow: 0 4px 0 #27ae60; }
+        .btn-join:active { transform: translateY(4px); box-shadow: none; }
+        
+        /* 버저 버튼 디자인 */
+        #buzzerBtn { 
+            width: 250px; height: 250px; border-radius: 50%; font-size: 36px; font-weight: bold;
+            background: #e74c3c; color: white; border: 10px solid #c0392b; 
+            cursor: pointer; box-shadow: 0 10px 0 #a93226; transition: 0.1s;
+            margin-top: 30px; display: flex; align-items: center; justify-content: center; margin: 30px auto 0 auto;
+        }
+        #buzzerBtn:active:not(:disabled) { transform: translateY(10px); box-shadow: none; }
+        #buzzerBtn:disabled { background: #7f8c8d; border-color: #95a5a6; box-shadow: 0 10px 0 #7f8c8d; cursor: not-allowed; opacity: 0.7; }
+        
+        .score-box { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 24px; }
+    </style>
+</head>
+<body>
+
+    <!-- 접속 화면 -->
+    <div id="loginArea" class="container">
+        <h2>👋 환영합니다!</h2>
+        <p>자신의 이름을 입력하고 접속하세요.</p>
+        <input type="text" id="playerName" placeholder="홍길동" onkeypress="if(event.keyCode==13) joinGame()">
+        <button class="btn-join" onclick="joinGame()">입장하기</button>
+    </div>
+
+    <!-- 게임 화면 -->
+    <div id="gameArea" class="container" style="display:none; width: 100%; max-width: 100%; background: none; padding: 0;">
+        <h1 id="myNameDisplay" style="margin-bottom: 5px;"></h1>
+        <div class="score-box">내 점수: <strong id="myScore" style="color: #f1c40f; font-size: 30px;">0</strong> 점</div>
+        
+        <button id="buzzerBtn" disabled onclick="pressBuzzer()">대기중</button>
+        <p style="margin-top: 20px; color: #bdc3c7;">선생님이 시작하시면 버튼이 빨간색으로 켜집니다!</p>
+    </div>
+
+    <script>
+        // 선생님의 Firebase 접속 정보 적용 완료
+        const firebaseConfig = {
+            apiKey: "AIzaSyCJ2RTGd9hlM4G_vGq1yjfbhwhLRlPQ6O8",
+            authDomain: "giga-buzz.firebaseapp.com",
+            databaseURL: "https://giga-buzz-default-rtdb.firebaseio.com",
+            projectId: "giga-buzz",
+            storageBucket: "giga-buzz.firebasestorage.app",
+            messagingSenderId: "123263420761",
+            appId: "1:123263420761:web:23643403fc18bb1d2ce448"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        
+        let myName = "";
+
+        // 게임 접속
+        function joinGame() {
+            myName = document.getElementById('playerName').value.trim();
+            if(!myName) return alert("이름을 꼭 입력해주세요!");
+            
+            document.getElementById('loginArea').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'block';
+            document.getElementById('myNameDisplay').innerText = myName + " 학생";
+
+            // 내 점수 실시간 연동 (처음 접속 시 점수가 없으면 0점 설정)
+            db.ref('players/' + myName + '/score').on('value', (snapshot) => {
+                let score = snapshot.val();
+                if(score === null) {
+                    db.ref('players/' + myName + '/score').set(0);
+                    score = 0;
+                }
+                document.getElementById('myScore').innerText = score;
+            });
+
+            // 교사 버저 활성화 상태 감지
+            db.ref('gameState/isBuzzerActive').on('value', (snapshot) => {
+                const isActive = snapshot.val();
+                const btn = document.getElementById('buzzerBtn');
+                if(isActive) {
+                    btn.disabled = false;
+                    btn.innerText = "눌러요!!";
+                    btn.style.background = "#e74c3c"; // 빨간색
+                    btn.style.borderColor = "#c0392b";
+                    btn.style.boxShadow = "0 10px 0 #a93226";
+                } else {
+                    btn.disabled = true;
+                    btn.innerText = "대기중";
+                    btn.style.background = "#7f8c8d"; // 회색
+                    btn.style.borderColor = "#95a5a6";
+                    btn.style.boxShadow = "0 10px 0 #7f8c8d";
+                }
+            });
+        }
+
+        // 버저 누르기 기능
+        function pressBuzzer() {
+            const btn = document.getElementById('buzzerBtn');
+            btn.disabled = true; // 무한 클릭 방지용으로 일단 내 화면에선 끄기
+            btn.innerText = "눌렀음!";
+            
+            // Firebase 서버의 절대 시간(0.001초 단위) 기록
+            db.ref('buzzers/' + myName).set(firebase.database.ServerValue.TIMESTAMP);
+        }
+    </script>
+</body>
+</html>
