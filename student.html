@@ -33,7 +33,7 @@
     <div id="loginArea" class="container">
         <h2>👋 환영합니다!</h2>
         <p>자신의 이름을 입력하고 접속하세요.</p>
-        <input type="text" id="playerName" placeholder="홍길동" onkeypress="if(event.keyCode==13) joinGame()">
+        <input type="text" id="playerName" placeholder="이름 또는 조 번호" onkeypress="if(event.keyCode==13) joinGame()">
         <button class="btn-join" onclick="joinGame()">입장하기</button>
     </div>
 
@@ -47,7 +47,7 @@
     </div>
 
     <script>
-        // 선생님의 Firebase 접속 정보 적용 완료
+        // 선생님의 Firebase 접속 정보
         const firebaseConfig = {
             apiKey: "AIzaSyCJ2RTGd9hlM4G_vGq1yjfbhwhLRlPQ6O8",
             authDomain: "giga-buzz.firebaseapp.com",
@@ -61,6 +61,7 @@
         const db = firebase.database();
         
         let myName = "";
+        let kickListener = null; // 강퇴 감지 리스너 변수
 
         // 게임 접속
         function joinGame() {
@@ -69,32 +70,47 @@
             
             document.getElementById('loginArea').style.display = 'none';
             document.getElementById('gameArea').style.display = 'block';
-            document.getElementById('myNameDisplay').innerText = myName + " 학생";
+            document.getElementById('myNameDisplay').innerText = myName;
 
-            // 내 점수 실시간 연동 (처음 접속 시 점수가 없으면 0점 설정)
-            db.ref('players/' + myName + '/score').on('value', (snapshot) => {
-                let score = snapshot.val();
-                if(score === null) {
+            // 1. 내 점수 실시간 연동 (처음 접속 시 점수가 없으면 0점 설정)
+            db.ref('players/' + myName + '/score').once('value').then((snapshot) => {
+                if(!snapshot.exists()) {
                     db.ref('players/' + myName + '/score').set(0);
-                    score = 0;
                 }
-                document.getElementById('myScore').innerText = score;
             });
 
-            // 교사 버저 활성화 상태 감지
+            // 점수 화면에 표시
+            db.ref('players/' + myName + '/score').on('value', (snapshot) => {
+                let score = snapshot.val();
+                if(score !== null) {
+                    document.getElementById('myScore').innerText = score;
+                }
+            });
+
+            // 2. 🚨 강제 퇴장(초기화) 감지 기능 🚨
+            // 선생님이 db.ref('players')를 아예 삭제해버리면 내 이름도 사라지는 것을 감지합니다.
+            kickListener = db.ref('players/' + myName).on('value', (snapshot) => {
+                // 내 데이터가 null이 되었다면 = 선생님이 초기화 버튼을 눌렀다!
+                if (snapshot.val() === null && document.getElementById('gameArea').style.display === 'block') {
+                    alert("선생님이 게임을 초기화하여 처음 화면으로 이동합니다.");
+                    window.location.reload(); // 스마트폰 화면을 아예 새로고침(처음으로 되돌림)
+                }
+            });
+
+            // 3. 교사 버저 활성화 상태 감지
             db.ref('gameState/isBuzzerActive').on('value', (snapshot) => {
                 const isActive = snapshot.val();
                 const btn = document.getElementById('buzzerBtn');
                 if(isActive) {
                     btn.disabled = false;
                     btn.innerText = "눌러요!!";
-                    btn.style.background = "#e74c3c"; // 빨간색
+                    btn.style.background = "#e74c3c"; 
                     btn.style.borderColor = "#c0392b";
                     btn.style.boxShadow = "0 10px 0 #a93226";
                 } else {
                     btn.disabled = true;
                     btn.innerText = "대기중";
-                    btn.style.background = "#7f8c8d"; // 회색
+                    btn.style.background = "#7f8c8d"; 
                     btn.style.borderColor = "#95a5a6";
                     btn.style.boxShadow = "0 10px 0 #7f8c8d";
                 }
@@ -104,10 +120,9 @@
         // 버저 누르기 기능
         function pressBuzzer() {
             const btn = document.getElementById('buzzerBtn');
-            btn.disabled = true; // 무한 클릭 방지용으로 일단 내 화면에선 끄기
+            btn.disabled = true; 
             btn.innerText = "눌렀음!";
             
-            // Firebase 서버의 절대 시간(0.001초 단위) 기록
             db.ref('buzzers/' + myName).set(firebase.database.ServerValue.TIMESTAMP);
         }
     </script>
