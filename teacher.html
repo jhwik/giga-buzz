@@ -16,17 +16,14 @@
         button { padding: 10px 15px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; transition: 0.2s; color: white; }
         button:active { transform: scale(0.95); }
         
-        /* 상단 컨트롤 버튼 색상 */
         .btn-start { background: #3498db; }
         .btn-start:hover { background: #2980b9; }
         .btn-stop { background: #e74c3c; }
         .btn-stop:hover { background: #c0392b; }
         
-        /* 강력한 초기화 버튼 (오른쪽 정렬 및 눈에 띄게) */
         .btn-reset-all { background: #34495e; margin-left: auto; border: 2px solid #2c3e50; }
         .btn-reset-all:hover { background: #2c3e50; }
 
-        /* 학생별 채점 버튼 색상 */
         .btn-correct { background: #2ecc71; margin-left: 10px; font-size: 14px; padding: 6px 12px; }
         .btn-correct:hover { background: #27ae60; }
         .btn-wrong { background: #e67e22; margin-left: 5px; font-size: 14px; padding: 6px 12px; }
@@ -36,7 +33,7 @@
         li { background: #ecf0f1; margin: 5px 0; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; }
         .btn-group { display: flex; gap: 5px; }
         .section-title { border-bottom: 2px solid #3498db; padding-bottom: 5px; color: #34495e; margin-top: 30px; display: flex; justify-content: space-between; align-items: center; }
-        .empty-msg { font-weight: normal; font-size: 14px; color: gray; text-align: center; padding: 10px; }
+        .empty-msg { font-weight: normal; font-size: 14px; color: gray; text-align: center; padding: 10px; justify-content: center; }
     </style>
 </head>
 <body>
@@ -48,7 +45,6 @@
             <input type="number" id="pointValue" value="10">
             <button class="btn-start" onclick="startRound()">🔔 버저 활성화</button>
             <button class="btn-stop" onclick="stopBuzzer()">🔒 버저 잠금</button>
-            <!-- 모든 데이터 삭제 버튼 -->
             <button class="btn-reset-all" onclick="resetAllData()">🧹 전체 초기화 (학생 내보내기)</button>
         </div>
 
@@ -80,7 +76,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // 선생님 화면 상단 버저 상태(열림/잠김) 텍스트 연동
+        // 선생님 화면 상단 버저 상태 연동
         db.ref('gameState/isBuzzerActive').on('value', (snapshot) => {
             const statusSpan = document.getElementById('buzzerStatus');
             if(snapshot.val() === true) {
@@ -94,7 +90,7 @@
 
         // 1. 라운드 시작 (버저 활성화)
         function startRound() {
-            db.ref('buzzers').remove(); // 이전 누른 기록 지우기
+            db.ref('buzzers').remove(); 
             db.ref('gameState/isBuzzerActive').set(true);
         }
 
@@ -103,27 +99,29 @@
             db.ref('gameState/isBuzzerActive').set(false);
         }
 
-        // 3. 🚨 모든 데이터 완전히 초기화 (학생 명단 포함)
+        // 3. 🚨 모든 데이터 완전히 초기화 (학생 내보내기)
         function resetAllData() {
-            // 실수로 누르는 것을 방지하기 위해 두 번 물어봅니다.
-            if(confirm("정말 모든 학생 명단과 점수, 누른 기록을 초기화하시겠습니까?\n(다른 반 수업을 새로 시작할 때만 사용하세요)")) {
+            if(confirm("정말 모든 학생 명단과 점수, 누른 기록을 초기화하시겠습니까?\n(학생들의 기기에서도 첫 화면으로 쫓겨납니다)")) {
                 
-                // 1) 학생 명단 및 점수 삭제
+                // 데이터베이스의 모든 정보를 통째로 날립니다.
                 db.ref('players').remove();
-                // 2) 버저 누른 기록 삭제
                 db.ref('buzzers').remove();
-                // 3) 버저 상태 잠금으로 변경
                 db.ref('gameState/isBuzzerActive').set(false);
                 
-                alert("성공적으로 모두 초기화되었습니다! 깨끗한 상태로 새 게임을 시작할 수 있습니다.");
+                // 화면의 명단도 강제로 텅 비웁니다.
+                document.getElementById('buzzerList').innerHTML = '<li class="empty-msg">대기 중... (버저를 활성화해주세요)</li>';
+                document.getElementById('scoreBoard').innerHTML = '<li class="empty-msg">접속한 학생이 없습니다.</li>';
+                
+                alert("성공적으로 모두 초기화되고 학생들을 내보냈습니다!");
             }
         }
 
         // 4. 실시간 버저 순서 감지
         db.ref('buzzers').orderByValue().on('value', (snapshot) => {
             const list = document.getElementById('buzzerList');
-            list.innerHTML = '';
+            list.innerHTML = ''; // 일단 화면 비우기
             
+            // 누른 학생이 한 명도 없으면 빈 메시지 띄우고 종료
             if(!snapshot.exists()) {
                 list.innerHTML = '<li class="empty-msg">아직 누른 학생이 없습니다.</li>';
                 return;
@@ -141,7 +139,6 @@
                 
                 li.innerHTML = `<span>${medal} ${rank}등 : ${name}</span>`;
                 
-                // 정답, 오답 버튼
                 const btnGroup = document.createElement('div');
                 btnGroup.className = "btn-group";
 
@@ -172,9 +169,9 @@
             playerRef.transaction((currentScore) => {
                 let score = currentScore || 0;
                 if(isCorrect) {
-                    return score + points; // 정답: 더하기
+                    return score + points;
                 } else {
-                    return score - points; // 오답: 빼기
+                    return score - points;
                 }
             });
             
@@ -190,8 +187,9 @@
         // 6. 점수판 실시간 업데이트
         db.ref('players').orderByChild('score').on('value', (snapshot) => {
             const scores = document.getElementById('scoreBoard');
-            scores.innerHTML = '';
+            scores.innerHTML = ''; // 일단 화면 비우기
             
+            // 데이터베이스에 학생이 한 명도 없으면 빈 메시지 띄우고 종료!
             if(!snapshot.exists()) {
                 scores.innerHTML = '<li class="empty-msg">접속한 학생이 없습니다.</li>';
                 return;
